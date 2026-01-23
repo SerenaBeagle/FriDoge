@@ -1,0 +1,8 @@
+{
+  "name": "fridoge",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openai": "^6.16.0"
+  }
+}

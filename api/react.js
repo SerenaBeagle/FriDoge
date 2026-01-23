@@ -1,10 +1,17 @@
 import OpenAI from "openai";
 
 export default async function handler(req, res) {
+
+  if (req.method === "GET") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.status(200).json({ ok: true, msg: "FriDoge API is alive" });
+  }
+  
   // ===== CORS headers (关键) =====
-  res.setHeader("Access-Control-Allow-Origin", "*"); // 你也可以换成你的 GitHub Pages 域名更安全
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
 
   // ===== Handle preflight =====
   if (req.method === "OPTIONS") {
@@ -15,6 +22,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const {

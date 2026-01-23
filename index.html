@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>FriDoge Demo</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -14,6 +15,7 @@
       --cream: #FFF7ED;
       --card: #FFFFFF;
       --line: #EAD7CB;
+      --shadow: rgba(107, 79, 63, 0.18);
     }
 
     * { box-sizing: border-box; font-family: 'Nunito', sans-serif; }
@@ -26,16 +28,23 @@
       justify-content: center;
       align-items: center;
       padding: 18px;
+      padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    }
+
+    /* ===== Outer shell becomes responsive ===== */
+    .shell {
+      width: 100%;
+      max-width: 980px; /* desktop can be wider now */
     }
 
     .app {
       width: 100%;
-      max-width: 460px;
       background: var(--card);
-      border-radius: 24px;
+      border-radius: 26px;
       padding: 22px;
-      box-shadow: 0 18px 40px rgba(107, 79, 63, 0.25);
+      box-shadow: 0 18px 40px var(--shadow);
       position: relative;
+      overflow: hidden;
     }
 
     /* ===== Language Toggle ===== */
@@ -50,6 +59,7 @@
       display: flex;
       font-size: 12px;
       user-select: none;
+      z-index: 5;
     }
     .lang-toggle span {
       padding: 6px 10px;
@@ -62,7 +72,7 @@
     }
 
     .header { text-align: center; margin-top: 12px; margin-bottom: 10px; }
-    .header h1 { margin: 0; font-size: 28px; color: var(--brown); }
+    .header h1 { margin: 0; font-size: 28px; color: var(--brown); letter-spacing: -0.3px; }
     .header p { margin-top: 6px; font-size: 14px; color: #8A6E5A; }
 
     .pill {
@@ -76,7 +86,23 @@
       font-size: 12px;
     }
 
-    .section { margin-top: 18px; }
+    /* ===== Main layout: mobile 1-col, desktop 2-col ===== */
+    .layout {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .panel {
+      background: rgba(255, 247, 237, 0.35);
+      border: 1px solid rgba(234, 215, 203, 0.8);
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    .section { margin-top: 14px; }
+    .section:first-child { margin-top: 0; }
 
     label {
       display: block;
@@ -115,123 +141,217 @@
       color: #9C7C6A;
     }
 
-    .button-wrapper { margin-top: 22px; text-align: center; }
+    .button-wrapper { margin-top: 16px; text-align: center; }
 
     button {
+      width: 100%;
+      max-width: 360px;
       background: var(--yellow);
       color: var(--brown);
       border: none;
       border-radius: 999px;
-      padding: 12px 26px;
+      padding: 13px 22px;
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 8px 20px rgba(244, 208, 111, 0.6);
-      transition: all 0.2s ease;
+      box-shadow: 0 10px 22px rgba(244, 208, 111, 0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(244, 208, 111, 0.65); }
+    button:active { transform: translateY(0px); }
+
+    /* ===== Reaction panel ===== */
+    .reaction-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    button:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(244, 208, 111, 0.7); }
+    .reaction-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .reaction-title h3 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--brown);
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .mini-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mini-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--brown);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .mini-btn:hover { filter: brightness(0.98); }
 
     .reaction {
-      margin-top: 22px;
       background: #FFF8DC;
       border-radius: 18px;
       padding: 14px 16px;
-      min-height: 88px;
+      min-height: 140px;
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.65;
       white-space: pre-wrap;
       color: #5A4033;
+      border: 1px solid rgba(228, 201, 168, 0.8);
     }
     .reaction.loading { opacity: 0.75; font-style: italic; }
 
     .footer-note {
-      margin-top: 12px;
+      margin-top: 10px;
       font-size: 11px;
       color: #A18673;
       text-align: center;
+    }
+
+    /* ===== Desktop enhancements ===== */
+    @media (min-width: 860px) {
+      body { padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+      .app { padding: 26px; }
+      .header h1 { font-size: 32px; }
+      .layout {
+        grid-template-columns: 1.05fr 0.95fr; /* left: inputs, right: result */
+        gap: 18px;
+        align-items: start;
+      }
+      .panel { padding: 18px; border-radius: 22px; }
+
+      /* Sticky result on desktop for nice UX */
+      .right-panel {
+        position: sticky;
+        top: 18px;
+      }
+
+      /* Make reaction scroll inside the right panel */
+      .reaction {
+        min-height: 520px;
+        max-height: 62vh;
+        overflow: auto;
+      }
+    }
+
+    /* ===== Small phones ===== */
+    @media (max-width: 380px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .lang-toggle { top: 10px; right: 10px; }
+      .header h1 { font-size: 26px; }
     }
   </style>
 </head>
 
 <body>
-  <div class="app">
+  <div class="shell">
+    <div class="app">
 
-    <!-- Language Toggle -->
-    <div class="lang-toggle">
-      <span id="lang-en" class="active" onclick="setLang('en')">EN</span>
-      <span id="lang-zh" onclick="setLang('zh')">中文</span>
-    </div>
+      <!-- Language Toggle -->
+      <div class="lang-toggle">
+        <span id="lang-en" class="active" onclick="setLang('en')">EN</span>
+        <span id="lang-zh" onclick="setLang('zh')">中文</span>
+      </div>
 
-    <div class="header">
-      <h1>🐶 FriDoge 冰狗</h1>
-      <p id="subtitle">Your cozy fridge assistant</p>
-      <div class="pill" id="pill">✨ Quick demo: fridge → goal → reaction</div>
-    </div>
+      <div class="header">
+        <h1>🐶 FriDoge 冰狗</h1>
+        <p id="subtitle">Your cozy fridge assistant</p>
+        <div class="pill" id="pill">✨ Quick demo: fridge → goal → reaction</div>
+      </div>
 
-    <!-- New: People + Appetite -->
-    <div class="section">
-      <label id="label-people">👥 How many people?</label>
-      <div class="grid-2">
-        <div>
-          <input id="people" type="number" min="1" step="1" value="1" />
-          <div class="hint" id="hint-people">Set 1 for solo meal</div>
+      <div class="layout">
+        <!-- LEFT: inputs -->
+        <div class="panel left-panel">
+
+          <!-- People + Appetite -->
+          <div class="section">
+            <label id="label-people">👥 How many people?</label>
+            <div class="grid-2">
+              <div>
+                <input id="people" type="number" min="1" step="1" value="1" />
+                <div class="hint" id="hint-people">Set 1 for solo meal</div>
+              </div>
+              <div>
+                <label id="label-appetite" style="margin-bottom:6px;">🍽️ Appetite</label>
+                <select id="appetite">
+                  <option value="small">Small</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="big">Big</option>
+                </select>
+                <div class="hint" id="hint-appetite">Helps portion sizing</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Goal -->
+          <div class="section">
+            <label id="label-goal">🎯 Choose a style</label>
+            <select id="goal">
+              <option value="fat_loss" selected>Fat loss / 减脂</option>
+              <option value="muscle_gain">Muscle gain / 增肌</option>
+              <option value="low_sugar">Low sugar / 控糖</option>
+              <option value="cheat_meal">Cheat meal / 欺骗餐</option>
+              <option value="whatever">Whatever / 随便吃</option>
+            </select>
+            <div class="hint" id="hint-goal">FriDoge will adapt tone + recipe choices</div>
+          </div>
+
+          <!-- Fridge items -->
+          <div class="section">
+            <label id="label-items">🥦 What's in your fridge?</label>
+            <textarea id="items" rows="4" placeholder="milk, eggs, broccoli"></textarea>
+            <div class="hint" id="hint-items">Tip: separate items by commas</div>
+          </div>
+
+          <!-- Main request -->
+          <div class="section">
+            <label id="label-request">💭 What do you want today?</label>
+            <textarea id="request" rows="3" placeholder="I want a healthy and easy meal today"></textarea>
+          </div>
+
+          <!-- Extra -->
+          <div class="section">
+            <label id="label-extra">🧩 Personal needs (optional)</label>
+            <textarea id="extra" rows="3" placeholder="e.g. no dairy, 15-min cooking, spicy, high protein, period-friendly..."></textarea>
+            <div class="hint" id="hint-extra">Allergies / dislikes / time limit / cookware</div>
+          </div>
+
+          <div class="button-wrapper">
+            <button id="ask-btn" onclick="send()">Ask FriDoge 🐾</button>
+          </div>
+
+          <div class="footer-note" id="footer-note">
+            🐶 Tip: later you can add cute images/illustrations without changing the logic.
+          </div>
         </div>
-        <div>
-          <label id="label-appetite" style="margin-bottom:6px;">🍽️ Appetite</label>
-          <select id="appetite">
-            <option value="small">Small</option>
-            <option value="normal" selected>Normal</option>
-            <option value="big">Big</option>
-          </select>
-          <div class="hint" id="hint-appetite">Helps portion sizing</div>
+
+        <!-- RIGHT: result -->
+        <div class="panel right-panel">
+          <div class="reaction-wrap">
+            <div class="reaction-title">
+              <h3 id="reaction-title">🧾 AI Reaction</h3>
+              <div class="mini-btns">
+                <button class="mini-btn" onclick="copyResult()">Copy</button>
+                <button class="mini-btn" onclick="clearResult()">Clear</button>
+              </div>
+            </div>
+            <div id="result" class="reaction">FriDoge is waiting for your fridge info 🧊</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- New: Goal Category -->
-    <div class="section">
-      <label id="label-goal">🎯 Choose a style</label>
-      <select id="goal">
-        <option value="fat_loss" selected>Fat loss / 减脂</option>
-        <option value="muscle_gain">Muscle gain / 增肌</option>
-        <option value="low_sugar">Low sugar / 控糖</option>
-        <option value="cheat_meal">Cheat meal / 欺骗餐</option>
-        <option value="whatever">Whatever / 随便吃</option>
-      </select>
-      <div class="hint" id="hint-goal">FriDoge will adapt tone + recipe choices</div>
-    </div>
-
-    <!-- Fridge items -->
-    <div class="section">
-      <label id="label-items">🥦 What's in your fridge?</label>
-      <textarea id="items" rows="4" placeholder="milk, eggs, broccoli"></textarea>
-      <div class="hint" id="hint-items">Tip: separate items by commas</div>
-    </div>
-
-    <!-- Main request -->
-    <div class="section">
-      <label id="label-request">💭 What do you want today?</label>
-      <textarea id="request" rows="3" placeholder="I want a healthy and easy meal today"></textarea>
-    </div>
-
-    <!-- New: Personal constraints -->
-    <div class="section">
-      <label id="label-extra">🧩 Personal needs (optional)</label>
-      <textarea id="extra" rows="3" placeholder="e.g. no dairy, 15-min cooking, spicy, high protein, period-friendly..."></textarea>
-      <div class="hint" id="hint-extra">Allergies / dislikes / time limit / cookware</div>
-    </div>
-
-    <div class="button-wrapper">
-      <button id="ask-btn" onclick="send()">Ask FriDoge 🐾</button>
-    </div>
-
-    <div id="result" class="reaction">
-      FriDoge is waiting for your fridge info 🧊
-    </div>
-
-    <div class="footer-note" id="footer-note">
-      🐶 Tip: later you can add cute images/illustrations without changing the logic.
     </div>
   </div>
 
@@ -256,7 +376,9 @@
         ask: "Ask FriDoge 🐾",
         thinking: "🐶 FriDoge is thinking...",
         waiting: "FriDoge is waiting for your fridge info 🧊",
-        footer: "🐶 Tip: later you can add cute images/illustrations without changing the logic."
+        footer: "🐶 Tip: later you can add cute images/illustrations without changing the logic.",
+        reactionTitle: "🧾 AI Reaction",
+        copied: "✅ Copied!"
       },
       zh: {
         subtitle: "你贴心的冰箱小管家",
@@ -275,7 +397,9 @@
         ask: "问问冰狗 🐾",
         thinking: "🐶 冰狗正在思考中...",
         waiting: "冰狗在等你告诉我冰箱里有什么 🧊",
-        footer: "🐶 提示：以后可以随时加可爱插画，不影响逻辑。"
+        footer: "🐶 提示：以后可以随时加可爱插画，不影响逻辑。",
+        reactionTitle: "🧾 冰狗回复",
+        copied: "✅ 已复制！"
       }
     };
 
@@ -306,10 +430,16 @@
       document.getElementById("hint-extra").innerText = textMap[lang].hintExtra;
 
       document.getElementById("ask-btn").innerText = textMap[lang].ask;
-      document.getElementById("result").innerText = textMap[lang].waiting;
+      document.getElementById("reaction-title").innerText = textMap[lang].reactionTitle;
+
+      // 不强行覆盖用户已经生成的结果；只在空时设置 waiting
+      const result = document.getElementById("result");
+      if (!result.dataset.hasResult) {
+        result.innerText = textMap[lang].waiting;
+      }
+
       document.getElementById("footer-note").innerText = textMap[lang].footer;
 
-      // 你也可以顺手把 placeholder 做中英文（可选）
       if (lang === "zh") {
         document.getElementById("items").placeholder = "牛奶, 鸡蛋, 西兰花";
         document.getElementById("request").placeholder = "我想吃得健康一点，做法简单";
@@ -318,6 +448,28 @@
         document.getElementById("items").placeholder = "milk, eggs, broccoli";
         document.getElementById("request").placeholder = "I want a healthy and easy meal today";
         document.getElementById("extra").placeholder = "e.g. no dairy, 15-min cooking, spicy, high protein, period-friendly...";
+      }
+    }
+
+    function clearResult() {
+      const result = document.getElementById("result");
+      result.dataset.hasResult = "";
+      result.classList.remove("loading");
+      result.innerText = textMap[currentLang].waiting;
+    }
+
+    async function copyResult() {
+      const text = document.getElementById("result").innerText || "";
+      try {
+        await navigator.clipboard.writeText(text);
+        // 简单提示：临时改标题
+        const t = document.getElementById("reaction-title");
+        const old = t.innerText;
+        t.innerText = textMap[currentLang].copied;
+        setTimeout(() => (t.innerText = old), 900);
+      } catch (e) {
+        // 不强依赖 clipboard 权限
+        alert("Copy failed. Please select text and copy manually.");
       }
     }
 
@@ -331,31 +483,41 @@
       const extra = document.getElementById("extra").value;
 
       const people = parseInt(document.getElementById("people").value || "1", 10);
-      const appetite = document.getElementById("appetite").value;  // small/normal/big
-      const goal = document.getElementById("goal").value;          // fat_loss/muscle_gain/...
+      const appetite = document.getElementById("appetite").value;
+      const goal = document.getElementById("goal").value;
 
       const result = document.getElementById("result");
       result.innerText = textMap[currentLang].thinking;
       result.classList.add("loading");
 
       const API_BASE = "https://fri-doge.vercel.app";
-      const res = await fetch(`${API_BASE}/api/react`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lang: currentLang,
-          items,
-          request,
-          extra,
-          people,
-          appetite,
-          goal
-        })
-      });
 
-      const data = await res.json();
-      result.classList.remove("loading");
-      result.innerText = data.result;
+      try {
+        const res = await fetch(`${API_BASE}/api/react`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lang: currentLang,
+            items,
+            request,
+            extra,
+            people,
+            appetite,
+            goal
+          })
+        });
+
+        const data = await res.json();
+        result.classList.remove("loading");
+        result.dataset.hasResult = "1";
+        result.innerText = data.result || JSON.stringify(data, null, 2);
+      } catch (err) {
+        result.classList.remove("loading");
+        result.dataset.hasResult = "1";
+        result.innerText = (currentLang === "zh")
+          ? "❌ 请求失败：请检查网络或 API 地址是否正确。"
+          : "❌ Request failed: please check network or API URL.";
+      }
     }
   </script>
 </body>

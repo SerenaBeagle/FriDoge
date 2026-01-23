@@ -88,6 +88,7 @@ export default async function handler(req, res) {
   const prompt = `
 You are FriDoge, a warm, cute, practical fridge assistant dog 🐶.
 You help users decide what to cook based on what they have.
+You already read a lot of recipes for traditional Chinese food and Western food, and know how to give proper and practical advice.
 
 TASK:
 Create a SIMPLE plan for ONE meal (not a whole day), using the provided foods as much as possible.

@@ -338,7 +338,7 @@
       result.innerText = textMap[currentLang].thinking;
       result.classList.add("loading");
 
-      const res = await fetch("https://fri-doge-2811i6pag-serenas-projects-fd24d58b.vercel.app/api/react", {
+      const res = await fetch("https://fri-doge.vercel.app/api/react", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -75,6 +75,7 @@
     .header h1 { margin: 0; font-size: 28px; color: var(--brown); letter-spacing: -0.3px; }
     .header p { margin-top: 6px; font-size: 14px; color: #8A6E5A; }
 
+    /* Enter contents*/
     .pill {
       margin: 14px auto 0;
       width: fit-content;
@@ -94,6 +95,7 @@
       gap: 14px;
     }
 
+    /* Buttons*/
     .panel {
       background: rgba(255, 247, 237, 0.35);
       border: 1px solid rgba(234, 215, 203, 0.8);
@@ -252,6 +254,81 @@
       .lang-toggle { top: 10px; right: 10px; }
       .header h1 { font-size: 26px; }
     }
+
+
+    /* ===== Items table ===== */
+    .items-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .items-table {
+      border: 1px solid rgba(234, 215, 203, 0.8);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255, 247, 237, 0.35);
+    }
+
+    .items-header, .item-row {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr 1fr 40px;
+      gap: 8px;
+      padding: 10px;
+      align-items: center;
+    }
+
+    .items-header {
+      background: #FFF;
+      border-bottom: 1px solid rgba(234, 215, 203, 0.8);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--brown);
+    }
+
+    .item-row {
+      border-bottom: 1px solid rgba(234, 215, 203, 0.5);
+    }
+
+    .item-row:last-child {
+      border-bottom: none;
+    }
+
+    .item-row input {
+      padding: 10px 10px;
+      border-radius: 14px;
+      font-size: 13px;
+    }
+
+    .remove-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+      font-weight: 900;
+      color: var(--brown);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .remove-btn:hover { filter: brightness(0.98); }
+
+    /* small screens: stack columns */
+    @media (max-width: 720px) {
+      .items-header { display: none; }
+      .item-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .item-row .remove-cell {
+        grid-column: 1 / -1;
+        text-align: right;
+      }
+    }
+
   </style>
 </head>
 
@@ -309,11 +386,44 @@
           </div>
 
           <!-- Fridge items -->
-          <div class="section">
+          <!-- <div class="section">
             <label id="label-items">🥦 What's in your fridge?</label>
             <textarea id="items" rows="4" placeholder="milk, eggs, broccoli"></textarea>
             <div class="hint" id="hint-items">Tip: separate items by commas</div>
+          </div> -->
+
+          <!-- Fridge items -->
+          <div class="section">
+            <label id="label-items">🥦 What's in your fridge?</label>
+
+            <div class="items-toolbar">
+              <button class="mini-btn" type="button" onclick="addItemRow()">
+                ➕ Add item
+              </button>
+              <button class="mini-btn" type="button" onclick="clearItemsTable()">
+                🧹 Clear items
+              </button>
+            </div>
+
+            <div class="items-table" id="items-table">
+              <div class="items-header">
+                <div>Name</div>
+                <div>Weight (g)</div>
+                <div>Energy (kJ)</div>
+                <div>Protein (g/100g)</div>
+                <div>Carb (g/100g)</div>
+                <div>Fat (g/100g)</div>
+                <div></div>
+              </div>
+
+              <div id="items-rows"></div>
+            </div>
+
+            <div class="hint" id="hint-items">
+              Tip: add one food per row. Leave blank if unknown (will be None).
+            </div>
           </div>
+
 
           <!-- Main request -->
           <div class="section">
@@ -403,6 +513,8 @@
       }
     };
 
+
+
     function setLang(lang) {
       currentLang = lang;
 
@@ -441,15 +553,17 @@
       document.getElementById("footer-note").innerText = textMap[lang].footer;
 
       if (lang === "zh") {
-        document.getElementById("items").placeholder = "牛奶, 鸡蛋, 西兰花";
+        // document.getElementById("items").placeholder = "牛奶, 鸡蛋, 西兰花";
         document.getElementById("request").placeholder = "我想吃得健康一点，做法简单";
         document.getElementById("extra").placeholder = "比如：不吃乳制品、15分钟搞定、想吃辣、高蛋白、姨妈友好...";
       } else {
-        document.getElementById("items").placeholder = "milk, eggs, broccoli";
+        // document.getElementById("items").placeholder = "milk, eggs, broccoli";
         document.getElementById("request").placeholder = "I want a healthy and easy meal today";
         document.getElementById("extra").placeholder = "e.g. no dairy, 15-min cooking, spicy, high protein, period-friendly...";
       }
     }
+
+
 
     function clearResult() {
       const result = document.getElementById("result");
@@ -457,6 +571,8 @@
       result.classList.remove("loading");
       result.innerText = textMap[currentLang].waiting;
     }
+
+
 
     async function copyResult() {
       const text = document.getElementById("result").innerText || "";
@@ -473,11 +589,96 @@
       }
     }
 
+
+
+    function addItemRow(prefill = {}) {
+      const rows = document.getElementById("items-rows");
+
+      const row = document.createElement("div");
+      row.className = "item-row";
+
+      row.innerHTML = `
+        <input class="item-name" type="text" placeholder="e.g. chicken breast" value="${escapeHtml(prefill.name ?? "")}" />
+        <input class="item-weight" type="number" min="0" step="any" placeholder="g" value="${prefill.weight_g ?? ""}" />
+        <input class="item-energy" type="number" min="0" step="any" placeholder="kJ" value="${prefill.energy_kj ?? ""}" />
+        <input class="item-protein" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.protein_g_per_100g ?? ""}" />
+        <input class="item-carb" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.carb_g_per_100g ?? ""}" />
+        <input class="item-fat" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.fat_g_per_100g ?? ""}" />
+        <div class="remove-cell">
+          <button class="remove-btn" type="button" title="Remove" onclick="this.closest('.item-row').remove()">✕</button>
+        </div>
+      `;
+
+      rows.appendChild(row);
+    }
+
+
+
+    function clearItemsTable() {
+      document.getElementById("items-rows").innerHTML = "";
+    }
+
+
+
+    // Convert empty -> null (meaning "None"), and number -> Number
+    function readNullableNumber(value) {
+      const s = (value ?? "").toString().trim();
+      if (!s) return null; // <-- None semantics
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+
+
+    function readItemsFromTable() {
+      const rows = Array.from(document.querySelectorAll("#items-rows .item-row"));
+      const items = [];
+
+      for (const r of rows) {
+        const name = (r.querySelector(".item-name")?.value ?? "").trim();
+
+        // If user adds an empty row, skip it
+        const hasAnyField =
+          name ||
+          (r.querySelector(".item-weight")?.value ?? "").trim() ||
+          (r.querySelector(".item-energy")?.value ?? "").trim() ||
+          (r.querySelector(".item-protein")?.value ?? "").trim() ||
+          (r.querySelector(".item-carb")?.value ?? "").trim() ||
+          (r.querySelector(".item-fat")?.value ?? "").trim();
+
+        if (!hasAnyField) continue;
+
+        items.push({
+          name: name || null, // None if not given
+          weight_g: readNullableNumber(r.querySelector(".item-weight")?.value),
+          energy_kj: readNullableNumber(r.querySelector(".item-energy")?.value),
+          protein_g_per_100g: readNullableNumber(r.querySelector(".item-protein")?.value),
+          carb_g_per_100g: readNullableNumber(r.querySelector(".item-carb")?.value),
+          fat_g_per_100g: readNullableNumber(r.querySelector(".item-fat")?.value),
+        });
+      }
+
+      return items;
+    }
+
+
+    
+    // Small helper to avoid breaking HTML when prefilling strings
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+
     async function send() {
-      const items = document.getElementById("items").value
-        .split(",")
-        .map(i => i.trim())
-        .filter(Boolean);
+      // const items = document.getElementById("items").value
+      //   .split(",")
+      //   .map(i => i.trim())
+      //   .filter(Boolean);
+      const items = readItemsFromTable();
 
       const request = document.getElementById("request").value;
       const extra = document.getElementById("extra").value;
@@ -491,6 +692,7 @@
       result.classList.add("loading");
 
       const API_BASE = "https://fri-doge.vercel.app";
+
 
       try {
         const res = await fetch(`${API_BASE}/api/react`, {

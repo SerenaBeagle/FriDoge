@@ -1,41 +1,84 @@
 import OpenAI from "openai";
 
+function toNone(val) {
+  // null/undefined/"" -> "None"
+  if (val === null || val === undefined) return "None";
+  if (typeof val === "string" && val.trim() === "") return "None";
+  return String(val);
+}
+
+function isItemObject(x) {
+  return x && typeof x === "object" && !Array.isArray(x);
+}
+
+function formatItemsForPrompt(items) {
+  // Accept both:
+  // 1) string[]
+  // 2) { name, weight_g, energy_kj, protein_g_per_100g, carb_g_per_100g, fat_g_per_100g }[]
+  if (!Array.isArray(items)) return { lines: [], count: 0 };
+
+  // Old format: string[]
+  if (items.length > 0 && typeof items[0] === "string") {
+    const cleaned = items.map(s => String(s).trim()).filter(Boolean);
+    return {
+      lines: cleaned.map(x => `- ${x}`),
+      count: cleaned.length
+    };
+  }
+
+  // New format: object[]
+  const lines = [];
+  for (const it of items) {
+    if (!isItemObject(it)) continue;
+
+    const name = (it.name ?? "").toString().trim() || "Unknown item";
+
+    const weight_g = it.weight_g;
+    const energy_kj = it.energy_kj;
+    const protein = it.protein_g_per_100g;
+    const carb = it.carb_g_per_100g;
+    const fat = it.fat_g_per_100g;
+
+    // Skip totally empty rows (if someone sends them)
+    const hasAny =
+      (it.name ?? "").toString().trim() ||
+      weight_g !== null && weight_g !== undefined ||
+      energy_kj !== null && energy_kj !== undefined ||
+      protein !== null && protein !== undefined ||
+      carb !== null && carb !== undefined ||
+      fat !== null && fat !== undefined;
+
+    if (!hasAny) continue;
+
+    lines.push(
+      `- ${name} | weight_g=${toNone(weight_g)} | energy_kJ=${toNone(energy_kj)} | ` +
+      `protein_g/100g=${toNone(protein)} | carb_g/100g=${toNone(carb)} | fat_g/100g=${toNone(fat)}`
+    );
+  }
+
+  return { lines, count: lines.length };
+}
+
 export default async function handler(req, res) {
   // =========================
-  // CORS (统一放最前面)
+  // CORS
   // =========================
-  // 先用 * 跑通 demo；后面想更安全可以改成只允许 GitHub Pages 域名
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  // 让浏览器缓存 preflight（可选）
   res.setHeader("Access-Control-Max-Age", "86400");
 
-  // =========================
-  // Preflight
-  // =========================
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
 
-  // =========================
-  // Health check (用于验证部署成功)
-  // =========================
+  // Health check
   if (req.method === "GET") {
     return res.status(200).json({ ok: true, msg: "FriDoge API is alive" });
   }
 
-  // =========================
-  // Only allow POST for main logic
-  // =========================
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // =========================
-  // Init OpenAI client
-  // =========================
   if (!process.env.OPENAI_API_KEY) {
     return res.status(500).json({
       error: "Missing OPENAI_API_KEY in environment variables (Vercel)."
@@ -49,41 +92,40 @@ export default async function handler(req, res) {
   // =========================
   const {
     lang = "en",                 // "zh" | "en"
-    items = [],                  // array of strings
-    request = "",                // main request
-    extra = "",                  // extra constraints
-    people = 1,                  // number
-    appetite = "normal",         // "small" | "normal" | "big" (or free text)
-    goal = "whatever"            // "fat_loss" | "muscle_gain" | "low_sugar" | "cheat" | "whatever"
+    items = [],                  // string[] OR object[]
+    request = "",
+    extra = "",
+    people = 1,
+    appetite = "normal",
+    goal = "whatever"
   } = req.body || {};
 
-  if (!Array.isArray(items) || items.length === 0) {
+  const { lines: fridgeLines, count: fridgeCount } = formatItemsForPrompt(items);
+
+  if (fridgeCount === 0) {
     return res.status(200).json({
       result:
         lang === "zh"
-          ? "🐶 冰狗：你还没告诉我冰箱里有什么呢～（请在“冰箱里有什么”里输入食材）"
-          : "🐶 FriDoge: Tell me what's in your fridge first! (Please enter some items.)"
+          ? "🐶 冰狗：你还没告诉我冰箱里有什么呢～（请先添加至少一条食材）"
+          : "🐶 FriDoge: Tell me what's in your fridge first! (Please add at least one item.)"
     });
   }
 
   // =========================
-  // Structured instruction prompt
+  // Prompt
   // =========================
   const language = lang === "zh" ? "Chinese" : "English";
 
+  // NOTE: front-end uses cheat_meal in index.html :contentReference[oaicite:1]{index=1}
   const goalMap = {
     fat_loss: lang === "zh" ? "减脂" : "Fat loss",
     muscle_gain: lang === "zh" ? "增肌" : "Muscle gain",
     low_sugar: lang === "zh" ? "控糖" : "Low sugar",
     cheat: lang === "zh" ? "欺骗餐" : "Cheat meal",
+    cheat_meal: lang === "zh" ? "欺骗餐" : "Cheat meal",
     whatever: lang === "zh" ? "随便吃" : "Anything"
   };
   const goalText = goalMap[goal] || goal;
-
-  const safeNoteZh =
-    "注意：如果涉及生食/半熟/隔夜菜等风险，请给出食品安全提醒（但不用长篇科普）。";
-  const safeNoteEn =
-    "Note: If there are food safety risks (raw/undercooked/leftovers), add a short safety reminder (no long lecture).";
 
   const prompt = `
 You are FriDoge, a warm, reliable, and experienced home-cooking chef 🐶🍳.
@@ -117,6 +159,12 @@ Think like a real cook:
 - Avoid strange or experimental pairings.
 - Avoid “internet-viral” or gimmicky dishes.
 - If something essential is missing, suggest at most 1–2 OPTIONAL add-ons.
+
+If nutrition fields are provided (energy/macros), you MAY use them to:
+- choose leaner options for fat loss,
+- choose higher protein options for muscle gain,
+- reduce sugar-heavy choices for low sugar,
+but do NOT do heavy calculations. Keep it practical.
 
 =========================
 OUTPUT FORMAT (STRICT)
@@ -153,7 +201,7 @@ CONSTRAINTS
 =========================
 FOODS IN FRIDGE
 =========================
-${items.map((x) => `- ${x}`).join("\n")}
+${fridgeLines.join("\n")}
 
 =========================
 USER REQUEST
@@ -187,8 +235,6 @@ ${lang === "zh"
     });
   } catch (err) {
     console.error("OpenAI error:", err);
-
-    // 给前端更可读的错误（不会泄露 key）
     return res.status(500).json({
       error: "OpenAI request failed",
       detail: err?.message || String(err)

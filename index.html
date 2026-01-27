@@ -273,7 +273,7 @@
 
     .items-header, .item-row {
       display: grid;
-      grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr 1fr 40px;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr 1fr 0.7fr 40px;
       gap: 8px;
       padding: 10px;
       align-items: center;
@@ -413,6 +413,7 @@
                 <div>Protein (g/100g)</div>
                 <div>Carb (g/100g)</div>
                 <div>Fat (g/100g)</div>
+                <div>Photo</div>
                 <div></div>
               </div>
 
@@ -604,12 +605,109 @@
         <input class="item-protein" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.protein_g_per_100g ?? ""}" />
         <input class="item-carb" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.carb_g_per_100g ?? ""}" />
         <input class="item-fat" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.fat_g_per_100g ?? ""}" />
+
+        <div class="photo-cell">
+          <button class="mini-btn" type="button" onclick="triggerUploadForRow(this)">📷 Upload</button>
+          <input class="item-photo" type="file" accept="image/*" style="display:none" onchange="handlePhotoSelected(this)" />
+          <div class="hint item-photo-status" style="margin-top:6px; font-size:11px;"></div>
+        </div>
+
         <div class="remove-cell">
           <button class="remove-btn" type="button" title="Remove" onclick="this.closest('.item-row').remove()">✕</button>
         </div>
       `;
 
       rows.appendChild(row);
+    }
+
+
+
+    function triggerUploadForRow(btnEl) {
+      const row = btnEl.closest(".item-row");
+      const fileInput = row.querySelector(".item-photo");
+      fileInput.click();
+    }
+
+    async function handlePhotoSelected(fileInputEl) {
+      const row = fileInputEl.closest(".item-row");
+      const file = fileInputEl.files?.[0];
+      if (!file) return;
+
+      const statusEl = row.querySelector(".item-photo-status");
+      statusEl.innerText = currentLang === "zh" ? "正在识别营养成分表..." : "Reading nutrition label...";
+
+      try {
+        const dataUrl = await readFileAsDataURL(file);
+        // dataUrl example: "data:image/png;base64,AAAA..."
+        const base64 = dataUrl.split(",")[1] || "";
+        const mime = (dataUrl.split(";")[0] || "data:image/jpeg").replace("data:", "");
+
+        const fallbackName = (row.querySelector(".item-name")?.value ?? "").trim();
+        const fallbackWeight = row.querySelector(".item-weight")?.value ?? "";
+
+        const API_BASE = "https://fri-doge.vercel.app";
+
+        const res = await fetch(`${API_BASE}/api/nutrition`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lang: currentLang,
+            image_base64: base64,
+            image_mime: mime,
+            // 可选：如果图片不清晰，用手填信息作为 hint
+            hint: {
+              name: fallbackName || null,
+              weight_g: fallbackWeight ? Number(fallbackWeight) : null
+            }
+          })
+        });
+
+        const out = await res.json();
+        if (!res.ok) {
+          throw new Error(out?.error || "nutrition api failed");
+        }
+
+        // out.item is structured
+        fillRowFromItem(row, out.item);
+
+        statusEl.innerText = currentLang === "zh"
+          ? `✅ 已识别并回填（置信度：${out.confidence ?? "?"}）`
+          : `✅ Filled (confidence: ${out.confidence ?? "?"})`;
+      } catch (e) {
+        statusEl.innerText = currentLang === "zh"
+          ? `❌ 识别失败：${e.message}`
+          : `❌ Failed: ${e.message}`;
+      } finally {
+        // allow re-uploading same file
+        fileInputEl.value = "";
+      }
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("file read error"));
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function fillRowFromItem(row, item) {
+      // Only fill if returned value is not null/undefined.
+      // This prevents overwriting user manually-entered values.
+      const setIf = (selector, val) => {
+        if (val === null || val === undefined) return;
+        const el = row.querySelector(selector);
+        if (!el) return;
+        el.value = String(val);
+      };
+
+      setIf(".item-name", item.name);
+      setIf(".item-weight", item.weight_g);
+      setIf(".item-energy", item.energy_kj);
+      setIf(".item-protein", item.protein_g_per_100g);
+      setIf(".item-carb", item.carb_g_per_100g);
+      setIf(".item-fat", item.fat_g_per_100g);
     }
 
 

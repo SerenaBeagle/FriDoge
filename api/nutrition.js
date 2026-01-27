@@ -32,6 +32,21 @@ function clampReasonable(item) {
   return out;
 }
 
+function parseJsonFromResponse(resp) {
+  if (resp?.output_parsed) return resp.output_parsed;
+
+  const text = resp?.output_text;
+  if (!text || typeof text !== "string") {
+    throw new Error("OpenAI response has no output_text to parse.");
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`JSON.parse failed: ${e.message}. output_text head: ${text.slice(0, 300)}`);
+  }
+}
+
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -65,8 +80,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "image_base64 is required" });
   }
 
-  // We use Structured Outputs via response_format: json_schema
-  // so the model MUST return a JSON object matching schema.
+
   const schema = {
     name: "nutrition_item_schema",
     schema: {
@@ -130,7 +144,6 @@ Hint (may be null): name=${hint?.name ?? null}, weight_g=${hint?.weight_g ?? nul
     // 1) Extract from image
     const resp = await client.responses.create({
       model: "gpt-4.1-mini",
-      response_format: { type: "json_schema", json_schema: schema },
       input: [
         {
           role: "user",
@@ -142,10 +155,18 @@ Hint (may be null): name=${hint?.name ?? null}, weight_g=${hint?.weight_g ?? nul
             }
           ]
         }
-      ]
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: schema.name,     // ✅ 必填
+          strict: true,
+          schema: schema.schema  // ✅ 这里要传“真正的 JSON schema”，不是外层对象
+        }
+      }
     });
 
-    let parsed = resp.output_parsed;
+    let parsed = parseJsonFromResponse(resp);
     if (!parsed || !parsed.item) {
       return res.status(500).json({ error: "Failed to parse structured output" });
     }
@@ -208,11 +229,18 @@ Rules:
 
       const estResp = await client.responses.create({
         model: "gpt-4.1-mini",
-        response_format: { type: "json_schema", json_schema: estimateSchema },
-        input: estInstruction
+        input: estInstruction,
+        text: {
+          format: {
+            type: "json_schema",
+            name: estimateSchema.name,     // ✅ 必填
+            strict: true,
+            schema: estimateSchema.schema  // ✅ 同理：传内层 schema
+          }
+        }
       });
 
-      const est = estResp.output_parsed;
+      const est = parseJsonFromResponse(estResp);
       if (est && est.item) {
         const e = clampReasonable(est.item);
 

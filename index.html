@@ -271,12 +271,31 @@
       background: rgba(255, 247, 237, 0.35);
     }
 
-    .items-header, .item-row {
+    /* .items-header, .item-row {
       display: grid;
       grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr 1fr 0.7fr 40px;
       gap: 8px;
       padding: 10px;
       align-items: center;
+    } */
+
+    .item-row input[type="number"] {
+      font-size: 15px;
+      padding: 14px 12px;
+      min-height: 44px;
+    }
+
+    .items-header, .item-row {
+      padding-left: 14px;
+      padding-right: 10px;
+    }
+
+    @media (min-width: 860px) {
+      .items-header,
+      .item-row {
+        grid-template-columns:
+          1.3fr 1fr 1fr 1.1fr 1.1fr 1.1fr 0.7fr 40px;
+      }
     }
 
     .items-header {
@@ -286,6 +305,7 @@
       font-weight: 800;
       color: var(--brown);
     }
+
 
     .item-row {
       border-bottom: 1px solid rgba(234, 215, 203, 0.5);
@@ -407,13 +427,13 @@
 
             <div class="items-table" id="items-table">
               <div class="items-header">
-                <div>Name</div>
-                <div>Weight (g)</div>
-                <div>Energy (kJ)</div>
-                <div>Protein (g/100g)</div>
-                <div>Carb (g/100g)</div>
-                <div>Fat (g/100g)</div>
-                <div>Photo</div>
+                <div>  Name</div>
+                <div>  Weight (g)</div>
+                <div>  Energy (kJ)</div>
+                <div>  Protein (g/100g)</div>
+                <div>  Carb (g/100g)</div>
+                <div>  Fat (g/100g)</div>
+                <div>  Photo</div>
                 <div></div>
               </div>
 
@@ -664,7 +684,7 @@
 
         const out = await res.json();
         if (!res.ok) {
-          throw new Error(out?.error || "nutrition api failed");
+          throw new Error(out?.detail || out?.error || "nutrition api failed");
         }
 
         // out.item is structured
@@ -790,7 +810,6 @@
       result.classList.add("loading");
 
       const API_BASE = "https://fri-doge.vercel.app";
-
 
       try {
         const res = await fetch(`${API_BASE}/api/react`, {

@@ -1,0 +1,348 @@
+<style>
+    :root {
+      --pink: #F6C1CC;
+      --brown: #6B4F3F;
+      --yellow: #F4D06F;
+      --cream: #FFF7ED;
+      --card: #FFFFFF;
+      --line: #EAD7CB;
+      --shadow: rgba(107, 79, 63, 0.18);
+    }
+
+    * { box-sizing: border-box; font-family: 'Nunito', sans-serif; }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #FBE4E9, #FFF7ED);
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;   /* ✅ 改这里 */
+        padding: 18px;
+        padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    }
+
+    /* ===== Outer shell becomes responsive ===== */
+    .shell {
+      width: 100%;
+      max-width: 980px; /* desktop can be wider now */
+    }
+
+    .app {
+      width: 100%;
+      background: var(--card);
+      border-radius: 26px;
+      padding: 22px;
+      box-shadow: 0 18px 40px var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ===== Language Toggle ===== */
+    .lang-toggle {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: #FFF;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+      font-size: 12px;
+      user-select: none;
+      z-index: 5;
+    }
+    .lang-toggle span {
+      padding: 6px 10px;
+      cursor: pointer;
+      color: var(--brown);
+    }
+    .lang-toggle .active {
+      background: var(--yellow);
+      font-weight: 700;
+    }
+
+    .header { text-align: center; margin-top: 12px; margin-bottom: 10px; }
+    .header h1 { margin: 0; font-size: 28px; color: var(--brown); letter-spacing: -0.3px; }
+    .header p { margin-top: 6px; font-size: 14px; color: #8A6E5A; }
+
+    /* Enter contents*/
+    .pill {
+      margin: 14px auto 0;
+      width: fit-content;
+      background: #FFF8DC;
+      border: 1px dashed #E4C9A8;
+      color: #6B4F3F;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    /* ===== Main layout: mobile 1-col, desktop 2-col ===== */
+    .layout {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    /* Buttons*/
+    .panel {
+      background: rgba(255, 247, 237, 0.35);
+      border: 1px solid rgba(234, 215, 203, 0.8);
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    .section { margin-top: 14px; }
+    .section:first-child { margin-top: 0; }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--brown);
+    }
+
+    textarea, select, input {
+      width: 100%;
+      border-radius: 16px;
+      padding: 11px 12px;
+      border: 2px solid var(--line);
+      background: var(--cream);
+      font-size: 14px;
+      color: #4A372D;
+      outline: none;
+    }
+
+    textarea { resize: none; }
+
+    textarea:focus, select:focus, input:focus {
+      border-color: var(--pink);
+      background: #FFF;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9C7C6A;
+    }
+
+    .button-wrapper { margin-top: 16px; text-align: center; }
+
+    button {
+      width: 100%;
+      max-width: 360px;
+      background: var(--yellow);
+      color: var(--brown);
+      border: none;
+      border-radius: 999px;
+      padding: 13px 22px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(244, 208, 111, 0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(244, 208, 111, 0.65); }
+    button:active { transform: translateY(0px); }
+
+    /* ===== Reaction panel ===== */
+    .reaction-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .reaction-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .reaction-title h3 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--brown);
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .mini-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mini-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--brown);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .mini-btn:hover { filter: brightness(0.98); }
+
+    .reaction {
+      background: #FFF8DC;
+      border-radius: 18px;
+      padding: 14px 16px;
+      min-height: 140px;
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      color: #5A4033;
+      border: 1px solid rgba(228, 201, 168, 0.8);
+    }
+    .reaction.loading { opacity: 0.75; font-style: italic; }
+
+    .footer-note {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #A18673;
+      text-align: center;
+    }
+
+    /* ===== Desktop enhancements ===== */
+    @media (min-width: 860px) {
+      body { padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+      .app { padding: 26px; }
+      .header h1 { font-size: 32px; }
+      .layout {
+        grid-template-columns: 1.05fr 0.95fr; /* left: inputs, right: result */
+        gap: 18px;
+        align-items: start;
+      }
+      .panel { padding: 18px; border-radius: 22px; }
+
+      /* Sticky result on desktop for nice UX */
+      .right-panel {
+        position: sticky;
+        top: 18px;
+      }
+
+      /* Make reaction scroll inside the right panel */
+      .reaction {
+        min-height: 520px;
+        max-height: 62vh;
+        overflow: auto;
+      }
+    }
+
+    /* ===== Small phones ===== */
+    @media (max-width: 380px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .lang-toggle { top: 10px; right: 10px; }
+      .header h1 { font-size: 26px; }
+    }
+
+
+    /* ===== Items table ===== */
+    .items-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .items-table {
+      border: 1px solid rgba(234, 215, 203, 0.8);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255, 247, 237, 0.35);
+    }
+
+    /* .items-header, .item-row {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr 1fr 0.7fr 40px;
+      gap: 8px;
+      padding: 10px;
+      align-items: center;
+    } */
+
+    .item-row input[type="number"] {
+      font-size: 15px;
+      padding: 14px 12px;
+      min-height: 44px;
+    }
+
+    .items-header, .item-row {
+      padding-left: 14px;
+      padding-right: 10px;
+    }
+
+    @media (min-width: 860px) {
+      .items-header,
+      .item-row {
+        grid-template-columns:
+          1.3fr 1fr 1fr 1.1fr 1.1fr 1.1fr 0.7fr 40px;
+      }
+    }
+
+    .items-header {
+      background: #FFF;
+      border-bottom: 1px solid rgba(234, 215, 203, 0.8);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--brown);
+    }
+
+
+    .item-row {
+      border-bottom: 1px solid rgba(234, 215, 203, 0.5);
+    }
+
+    .item-row:last-child {
+      border-bottom: none;
+    }
+
+    .item-row input {
+      padding: 10px 10px;
+      border-radius: 14px;
+      font-size: 13px;
+    }
+
+    .remove-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+      font-weight: 900;
+      color: var(--brown);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .remove-btn:hover { filter: brightness(0.98); }
+
+    /* small screens: stack columns */
+    @media (max-width: 720px) {
+      .items-header { display: none; }
+      .item-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .item-row .remove-cell {
+        grid-column: 1 / -1;
+        text-align: right;
+      }
+    }
+
+    .hidden { display: none !important; }
+
+
+
+
+</style>

@@ -1,0 +1,87 @@
+<div class="panel" id="cook-choice">
+  <label data-i18n="cook.title">🍳 做饭菜谱</label>
+  <div class="hint" data-i18n="cook.desc">你可以选择继续（使用已保存的冰箱存货），或先去添加存货。</div>
+
+  <div class="section">
+    <button id="btn-cook-continue" data-i18n="cook.continue">✅ 继续</button>
+  </div>
+
+  <div class="section">
+    <button class="mini-btn" type="button" data-nav="inventory" data-i18n="cook.add_inventory">➕ 添加存货</button>
+  </div>
+
+  <div class="section">
+    <button class="mini-btn" type="button" data-nav="home" data-i18n="common.back">← Back</button>
+  </div>
+
+  <div class="hint" id="cook-items-hint"></div>
+</div>
+
+<div class="layout hidden" id="cook-form">
+  <div class="panel left-panel">
+
+    <div class="section">
+      <label id="label-people" data-i18n="cook.people">👥 How many people?</label>
+      <div class="grid-2">
+        <div>
+          <input id="people" type="number" min="1" step="1" value="1" />
+          <div class="hint" id="hint-people" data-i18n="cook.people_hint">Set 1 for solo meal</div>
+        </div>
+        <div>
+          <label id="label-appetite" style="margin-bottom:6px;" data-i18n="cook.appetite">🍽️ Appetite</label>
+          <select id="appetite">
+            <option value="small">Small</option>
+            <option value="normal" selected>Normal</option>
+            <option value="big">Big</option>
+          </select>
+          <div class="hint" id="hint-appetite" data-i18n="cook.appetite_hint">Helps portion sizing</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <label id="label-goal" data-i18n="cook.goal">🎯 Choose a style</label>
+      <select id="goal">
+        <option value="fat_loss" selected>Fat loss / 减脂</option>
+        <option value="muscle_gain">Muscle gain / 增肌</option>
+        <option value="low_sugar">Low sugar / 控糖</option>
+        <option value="cheat_meal">Cheat meal / 欺骗餐</option>
+        <option value="whatever">Whatever / 随便吃</option>
+      </select>
+      <div class="hint" id="hint-goal" data-i18n="cook.goal_hint">FriDoge will adapt tone + recipe choices</div>
+    </div>
+
+    <div class="section">
+      <label id="label-request" data-i18n="cook.request">💭 What do you want today?</label>
+      <textarea id="request" rows="3" data-i18n-placeholder="cook.request_ph" placeholder="I want a healthy and easy meal today"></textarea>
+    </div>
+
+    <div class="section">
+      <label id="label-extra" data-i18n="cook.extra">🧩 Personal needs (optional)</label>
+      <textarea id="extra" rows="3" data-i18n-placeholder="cook.extra_ph" placeholder="e.g. no dairy, 15-min cooking, spicy..."></textarea>
+      <div class="hint" id="hint-extra" data-i18n="cook.extra_hint">Allergies / dislikes / time limit / cookware</div>
+    </div>
+
+    <div class="button-wrapper">
+      <button id="ask-btn" data-i18n="cook.ask">Ask FriDoge 🐾</button>
+    </div>
+
+    <div class="button-wrapper">
+      <button class="mini-btn" type="button" data-nav="home">← Back</button>
+    </div>
+
+  </div>
+
+  <div class="panel right-panel">
+    <div class="reaction-wrap">
+      <div class="reaction-title">
+        <h3 id="reaction-title" data-i18n="cook.reaction">🧾 AI Reaction</h3>
+        <div class="mini-btns">
+          <button class="mini-btn" id="btn-copy" data-i18n="common.copy">Copy</button>
+          <button class="mini-btn" id="btn-clear"data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+      <div id="result" class="reaction" data-i18n="cook.waiting">FriDoge is waiting for your fridge info 🧊</div>
+    </div>
+  </div>
+</div>

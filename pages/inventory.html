@@ -1,0 +1,60 @@
+<div class="layout">
+  <div class="panel left-panel">
+
+    <div class="section">
+      <label data-i18n="inv.title">📦 添加存货</label>
+      <div class="hint" data-i18n="inv.desc">在这里录入冰箱食材（可上传营养表自动识别）。</div>
+    </div>
+
+    <div class="section">
+      <label id="label-items" data-i18n="inv.items_title">🥦 What's in your fridge?</label>
+
+      <div class="items-toolbar">
+        <button class="mini-btn" type="button" id="btn-add-row" data-i18n="inv.add_item">➕ Add item</button>
+        <button class="mini-btn" type="button" id="btn-clear-rows" data-i18n="inv.clear_items">🧹 Clear items</button>
+      </div>
+
+      <div class="items-table" id="items-table">
+        <div class="items-header">
+          <div data-i18n="inv.col_name">Name</div>
+          <div data-i18n="inv.col_weight">Weight (g)</div>
+          <div data-i18n="inv.col_energy">Energy (kJ)</div>
+          <div data-i18n="inv.col_protein">Protein (g/100g)</div>
+          <div data-i18n="inv.col_carb">Carb (g/100g)</div>
+          <div data-i18n="inv.col_fat">Fat (g/100g)</div>
+          <div data-i18n="inv.col_production">Production</div>
+          <div data-i18n="inv.col_expiry">Expiry</div>
+          <div data-i18n="inv.col_photo">Photo</div>
+          <div></div>
+        </div>
+
+        <div id="items-rows"></div>
+      </div>
+
+      <div class="hint" id="hint-items" data-i18n="inv.tip">
+        Tip: add one food per row. Leave blank if unknown (will be None).
+      </div>
+    </div>
+
+    <div class="button-wrapper">
+      <button id="btn-save-inventory" data-i18n="inv.save">💾 Save to fridge</button>
+      <button id="btn-delete-inventory" class="mini-btn" data-i18n="inv.delete">🗑️ Delete inventory</button>
+      <div class="hint" id="save-hint"></div>
+    </div>
+
+    <div class="button-wrapper">
+      <button class="mini-btn" type="button" data-nav="home" data-i18n="common.back">← Back</button>
+    </div>
+
+  </div>
+
+  <div class="panel right-panel">
+    <div class="reaction-wrap">
+      <div class="reaction-title">
+        <h3 data-i18n="inv.preview_title">🧾 Inventory</h3>
+      </div>
+      <div id="inventory-preview" class="reaction"></div>
+      <div id="inventory-empty" class="hint" data-i18n="inv.preview_empty">No items yet.</div>
+    </div>
+  </div>
+</div>

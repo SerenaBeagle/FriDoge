@@ -38,6 +38,8 @@ function formatItemsForPrompt(items) {
     const protein = it.protein_g_per_100g;
     const carb = it.carb_g_per_100g;
     const fat = it.fat_g_per_100g;
+    const prod = it.production_date;
+    const exp = it.expiry_date;
 
     // Skip totally empty rows (if someone sends them)
     const hasAny =
@@ -52,7 +54,7 @@ function formatItemsForPrompt(items) {
 
     lines.push(
       `- ${name} | weight_g=${toNone(weight_g)} | energy_kJ=${toNone(energy_kj)} | ` +
-      `protein_g/100g=${toNone(protein)} | carb_g/100g=${toNone(carb)} | fat_g/100g=${toNone(fat)}`
+      `protein_g/100g=${toNone(protein)} | carb_g/100g=${toNone(carb)} | fat_g/100g=${toNone(fat)} production_date=${toNone(prod)} | expiry_date=${toNone(exp)}`
     );
   }
 

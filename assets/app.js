@@ -34,7 +34,7 @@ const dict = {
     "home.desc": "Choose what you want to do:",
     "home.inventory": "📦 Add inventory",
     "home.cook": "🍳 Cook recipes",
-    "home.reminder": "🔔 Reminders (coming soon)",
+    "home.reminder": "🔔 Reminders",
     "home.reminder_desc": "This will be implemented after DB + reminder system.",
 
     "inv.title": "📦 Add inventory",
@@ -90,7 +90,7 @@ const dict = {
     "home.desc": "选择你要做的事：",
     "home.inventory": "📦 添加存货",
     "home.cook": "🍳 做饭菜谱",
-    "home.reminder": "🔔 请求查看提醒（暂未实现）",
+    "home.reminder": "🔔 请求查看提醒",
     "home.reminder_desc": "该功能后续接数据库与提醒系统再做。",
 
     "inv.title": "📦 添加存货",
@@ -261,9 +261,17 @@ async function loadView(name) {
   root.innerHTML = html;
 
   // bind page-specific logic
-  if (name === "home") initHome();
+  if (name === "home") {
+    initHome();
+    renderHomeReminderBanner();
+  }
+
   if (name === "inventory") initInventory();
   if (name === "cook") initCook();
+
+  if (name === "reminder") {
+    initReminderPage();
+  }
 
   // delegate nav buttons
   root.querySelectorAll("[data-nav]").forEach(el => {
@@ -328,6 +336,29 @@ function readFileAsDataURL(file) {
 /* ========= Page: Home ========= */
 function initHome() {
   // nothing special
+}
+
+function renderHomeReminderBanner() {
+  const container = document.getElementById("home-reminder-container");
+  if (!container) return;
+
+  const soon = getExpiringSoonItems(7);
+
+  container.innerHTML = "";
+
+  if (soon.length === 0) return;
+
+  const banner = document.createElement("div");
+  banner.className = "home-reminder-banner";
+
+  soon.forEach(it => {
+    const line = document.createElement("div");
+    line.className = "home-reminder-line";
+    line.innerText = `${it.name} — ${it.diffDays} day(s) left`;
+    banner.appendChild(line);
+  });
+
+  container.appendChild(banner);
 }
 
 
@@ -698,6 +729,66 @@ async function sendCook() {
       : "❌ Request failed: please check network or API URL.";
   }
 }
+
+
+
+
+
+
+
+
+/* ========= Page: Reminder========= */
+function getSortedInventoryByExpiry() {
+  const items = loadInventoryFromDB();
+
+  const today = new Date();
+
+  return items
+    .filter(it => it.expiry_date)
+    .map(it => {
+      const expiry = new Date(it.expiry_date);
+      const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+      return { ...it, diffDays };
+    })
+    .sort((a, b) => a.diffDays - b.diffDays);
+}
+
+
+function getExpiringSoonItems(days = 7) {
+  return getSortedInventoryByExpiry()
+    .filter(it => it.diffDays >= 0 && it.diffDays <= days);
+}
+
+
+
+function initReminderPage() {
+  const list = document.getElementById("reminder-list");
+  const items = getSortedInventoryByExpiry();
+
+  list.innerHTML = "";
+
+  if (items.length === 0) {
+    list.innerHTML = "<p>No expiry data available.</p>";
+    return;
+  }
+
+  items.forEach(it => {
+    const div = document.createElement("div");
+    div.className = "reminder-item";
+
+    const status =
+      it.diffDays < 0
+        ? "❌ Expired"
+        : it.diffDays === 0
+        ? "⚠️ Expires today"
+        : `⏳ ${it.diffDays} day(s) left`;
+
+    div.innerText = `${it.name || "Unknown"} — ${status}`;
+    list.appendChild(div);
+  });
+}
+
+
 
 /* ========= Boot ========= */
 document.addEventListener("DOMContentLoaded", () => {

@@ -342,7 +342,27 @@
 
     .hidden { display: none !important; }
 
-
-
+    
+    .reminder-list {
+      margin-top: 20px;
+    }
+    
+    .reminder-item {
+      background: #fff5e6;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+    
+    .home-reminder-banner {
+      background: #ffe0e0;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .home-reminder-line {
+      margin-bottom: 5px;
+    }
 
 </style>

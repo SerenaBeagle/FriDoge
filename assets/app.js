@@ -29,6 +29,7 @@ const dict = {
     "common.back": "← Back",
     "common.copy": "Copy",
     "common.clear": "Clear",
+    "common.unknown": "Unknown",
 
     "home.title": "🏠 Home",
     "home.desc": "Choose what you want to do:",
@@ -76,6 +77,12 @@ const dict = {
     "cook.ask": "Ask FriDoge 🐾",
     "cook.reaction": "🧾 AI Reaction",
     "cook.waiting": "FriDoge is waiting for your fridge info 🧊",
+    "rem.title": "⏰ Expiry Reminders",
+    "rem.desc": "Foods sorted by expiry date (nearest first).",
+    "rem.no_expiry": "No expiry data available.",
+    "rem.expired": "❌ Expired",
+    "rem.expires_today": "⚠️ Expires today",
+    "rem.left": "⏳ {n} day(s) left",
   },
 
   zh: {
@@ -85,6 +92,7 @@ const dict = {
     "common.back": "← 返回",
     "common.copy": "复制",
     "common.clear": "清空",
+    "common.unknown": "未知",
 
     "home.title": "🏠 主界面",
     "home.desc": "选择你要做的事：",
@@ -132,9 +140,24 @@ const dict = {
     "cook.ask": "问问冰狗 🐾",
     "cook.reaction": "🧾 冰狗回复",
     "cook.waiting": "冰狗在等你告诉我冰箱里有什么 🧊",
+    "rem.title": "⏰ 到期提醒",
+    "rem.desc": "按到期日期排序（越近越靠前）。",
+    "rem.no_expiry": "暂无到期日期信息。",
+    "rem.expired": "❌ 已过期",
+    "rem.expires_today": "⚠️ 今天到期",
+    "rem.left": "⏳ 剩余 {n} 天",
   }
 };
 
+
+function fmtI18n(key, vars = {}) {
+  const table = dict[currentLang] || dict.en;
+  let s = (table[key] !== undefined ? table[key] : (dict.en[key] ?? ""));
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.replaceAll(`{${k}}`, String(v));
+  }
+  return s;
+}
 
 
 function applyI18n() {
@@ -167,6 +190,18 @@ function applyI18n() {
   if (document.getElementById("inventory-preview")) {
     renderInventoryPreview(loadInventoryFromDB());
   }
+  
+  // ✅ 切换语言后：Home 页提醒横幅需要重渲染（里面有动态文本）
+  if (document.getElementById("home-reminder-container")) {
+    renderHomeReminderBanner();
+  }
+
+  // ✅ 切换语言后：Reminder 页列表需要重渲染（里面有动态文本）
+  if (document.getElementById("reminder-list")) {
+    initReminderPage();
+  }
+
+
 
 }
 
@@ -354,7 +389,7 @@ function renderHomeReminderBanner() {
   soon.forEach(it => {
     const line = document.createElement("div");
     line.className = "home-reminder-line";
-    line.innerText = `${it.name} — ${it.diffDays} day(s) left`;
+    line.innerText = `${it.name} — ${fmtI18n("rem.left", { n: it.diffDays })}`;
     banner.appendChild(line);
   });
 
@@ -763,12 +798,15 @@ function getExpiringSoonItems(days = 7) {
 
 function initReminderPage() {
   const list = document.getElementById("reminder-list");
-  const items = getSortedInventoryByExpiry();
+  if (!list) return;
 
+  const items = getSortedInventoryByExpiry();
   list.innerHTML = "";
 
   if (items.length === 0) {
-    list.innerHTML = "<p>No expiry data available.</p>";
+    const p = document.createElement("p");
+    p.innerText = fmtI18n("rem.no_expiry");
+    list.appendChild(p);
     return;
   }
 
@@ -776,14 +814,18 @@ function initReminderPage() {
     const div = document.createElement("div");
     div.className = "reminder-item";
 
-    const status =
-      it.diffDays < 0
-        ? "❌ Expired"
-        : it.diffDays === 0
-        ? "⚠️ Expires today"
-        : `⏳ ${it.diffDays} day(s) left`;
+    const name = (it.name && String(it.name).trim()) ? it.name : fmtI18n("common.unknown");
 
-    div.innerText = `${it.name || "Unknown"} — ${status}`;
+    let status = "";
+    if (it.diffDays < 0) {
+      status = fmtI18n("rem.expired");
+    } else if (it.diffDays === 0) {
+      status = fmtI18n("rem.expires_today");
+    } else {
+      status = fmtI18n("rem.left", { n: it.diffDays });
+    }
+
+    div.innerText = `${name} — ${status}`;
     list.appendChild(div);
   });
 }

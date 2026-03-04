@@ -46,6 +46,76 @@ function parseJsonFromResponse(resp) {
   }
 }
 
+async function estimateNutritionFromHint(client, { name, weight_g, userLang }) {
+  const estimateSchema = {
+    name: "nutrition_estimate_schema",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        item: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            energy_kj: { type: ["number", "null"] },
+            protein_g_per_100g: { type: ["number", "null"] },
+            carb_g_per_100g: { type: ["number", "null"] },
+            fat_g_per_100g: { type: ["number", "null"] }
+          },
+          required: ["energy_kj", "protein_g_per_100g", "carb_g_per_100g", "fat_g_per_100g"]
+        },
+        confidence: { type: "string", enum: ["high", "medium", "low"] },
+        notes: { type: "string" }
+      },
+      required: ["item", "confidence", "notes"]
+    }
+  };
+
+  const estInstruction = `
+You are estimating nutrition values for a packaged food product when complete label data is unavailable.
+
+Given:
+- product name: ${name}
+- net weight (g): ${weight_g}
+
+Task:
+Return plausible typical values PER 100g for:
+- energy_kj
+- protein_g_per_100g
+- carb_g_per_100g
+- fat_g_per_100g
+
+Rules:
+- If uncertain, return null rather than guessing wildly.
+- Confidence should usually be "low" or "medium" for estimates.
+- Keep notes short in ${userLang}.
+- Output strict JSON matching schema; no extra keys.
+`;
+
+  const estResp = await client.responses.create({
+    model: "gpt-4.1-mini",
+    input: estInstruction,
+    text: {
+      format: {
+        type: "json_schema",
+        name: estimateSchema.name,
+        strict: true,
+        schema: estimateSchema.schema
+      }
+    }
+  });
+
+  const est = parseJsonFromResponse(estResp);
+  if (!est || !est.item) {
+    throw new Error("Failed to parse estimate response");
+  }
+  return {
+    item: clampReasonable({ name: null, weight_g: null, ...est.item }),
+    confidence: est.confidence,
+    notes: est.notes
+  };
+}
+
 
 export default async function handler(req, res) {
   // CORS
@@ -73,11 +143,43 @@ export default async function handler(req, res) {
     lang = "en",
     image_base64 = "",
     image_mime = "image/jpeg",
-    hint = { name: null, weight_g: null }
+    hint = { name: null, weight_g: null },
+    estimate_only = false
   } = req.body || {};
 
-  if (!image_base64) {
-    return res.status(400).json({ error: "image_base64 is required" });
+  const hintName = (hint?.name ?? "").toString().trim() || null;
+  const hintWeight = normalizeNumber(hint?.weight_g);
+  const userLang = lang === "zh" ? "Chinese" : "English";
+
+  const estimateMode = !!estimate_only || !image_base64;
+  if (estimateMode && (!hintName || hintWeight === null)) {
+    return res.status(400).json({ error: "hint.name and hint.weight_g are required for estimate mode" });
+  }
+
+  if (estimateMode) {
+    try {
+      const est = await estimateNutritionFromHint(client, {
+        name: hintName,
+        weight_g: hintWeight,
+        userLang
+      });
+
+      return res.status(200).json({
+        item: {
+          name: hintName,
+          weight_g: hintWeight,
+          energy_kj: est.item.energy_kj,
+          protein_g_per_100g: est.item.protein_g_per_100g,
+          carb_g_per_100g: est.item.carb_g_per_100g,
+          fat_g_per_100g: est.item.fat_g_per_100g
+        },
+        confidence: est.confidence,
+        notes: est.notes
+      });
+    } catch (err) {
+      console.error("nutrition estimate error:", err);
+      return res.status(500).json({ error: "Nutrition estimate failed", detail: err?.message || String(err) });
+    }
   }
 
 
@@ -117,8 +219,6 @@ export default async function handler(req, res) {
     }
   };
 
-  const userLang = lang === "zh" ? "Chinese" : "English";
-
   const extractionInstruction = `
 You will be given ONE image of a nutrition facts table / ingredient label for ONE product.
 
@@ -137,7 +237,7 @@ Goal:
 
 Language: respond in ${userLang} in the "notes" field only; the JSON keys remain English.
 
-Hint (may be null): name=${hint?.name ?? null}, weight_g=${hint?.weight_g ?? null}
+Hint (may be null): name=${hintName ?? null}, weight_g=${hintWeight ?? null}
 `;
 
   try {
@@ -182,75 +282,18 @@ Hint (may be null): name=${hint?.name ?? null}, weight_g=${hint?.weight_g ?? nul
       item.fat_g_per_100g === null;
 
     if (hasNameAndWeight && macrosMissing) {
-      const estimateSchema = {
-        name: "nutrition_estimate_schema",
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            item: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                energy_kj: { type: ["number", "null"] },
-                protein_g_per_100g: { type: ["number", "null"] },
-                carb_g_per_100g: { type: ["number", "null"] },
-                fat_g_per_100g: { type: ["number", "null"] }
-              },
-              required: ["energy_kj", "protein_g_per_100g", "carb_g_per_100g", "fat_g_per_100g"]
-            },
-            confidence: { type: "string", enum: ["high", "medium", "low"] },
-            notes: { type: "string" }
-          },
-          required: ["item", "confidence", "notes"]
-        }
-      };
-
-      const estInstruction = `
-You are estimating nutrition values for a packaged food product when the photo does not provide macros clearly.
-
-Given:
-- product name: ${item.name}
-- net weight (g): ${item.weight_g}
-
-Task:
-Return plausible typical values PER 100g for:
-- energy_kj
-- protein_g_per_100g
-- carb_g_per_100g
-- fat_g_per_100g
-
-Rules:
-- If uncertain, return null rather than guessing wildly.
-- Confidence should usually be "low" or "medium" for estimates.
-- Keep notes short in ${userLang}.
-- Output strict JSON matching schema; no extra keys.
-`;
-
-      const estResp = await client.responses.create({
-        model: "gpt-4.1-mini",
-        input: estInstruction,
-        text: {
-          format: {
-            type: "json_schema",
-            name: estimateSchema.name,     // ✅ 必填
-            strict: true,
-            schema: estimateSchema.schema  // ✅ 同理：传内层 schema
-          }
-        }
+      const est = await estimateNutritionFromHint(client, {
+        name: item.name,
+        weight_g: item.weight_g,
+        userLang
       });
 
-      const est = parseJsonFromResponse(estResp);
       if (est && est.item) {
-        const e = clampReasonable(est.item);
+        if (item.energy_kj === null) item.energy_kj = est.item.energy_kj;
+        if (item.protein_g_per_100g === null) item.protein_g_per_100g = est.item.protein_g_per_100g;
+        if (item.carb_g_per_100g === null) item.carb_g_per_100g = est.item.carb_g_per_100g;
+        if (item.fat_g_per_100g === null) item.fat_g_per_100g = est.item.fat_g_per_100g;
 
-        // Fill only missing fields, never overwrite extracted ones
-        if (item.energy_kj === null) item.energy_kj = e.energy_kj;
-        if (item.protein_g_per_100g === null) item.protein_g_per_100g = e.protein_g_per_100g;
-        if (item.carb_g_per_100g === null) item.carb_g_per_100g = e.carb_g_per_100g;
-        if (item.fat_g_per_100g === null) item.fat_g_per_100g = e.fat_g_per_100g;
-
-        // downgrade confidence since estimate was used
         parsed.confidence = parsed.confidence === "high" ? "medium" : parsed.confidence;
         parsed.notes = `${parsed.notes}\n${est.notes}`.trim();
       }

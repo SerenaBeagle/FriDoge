@@ -134,6 +134,20 @@
       color: #9C7C6A;
     }
 
+    .notice {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .notice.warning {
+      background: #FFF2D9;
+      border: 1px solid #F4D06F;
+      color: #6B4F3F;
+    }
+
     .button-wrapper { margin-top: 16px; text-align: center; }
 
     button {
@@ -258,63 +272,64 @@
     .items-table {
       border: 1px solid rgba(234, 215, 203, 0.8);
       border-radius: 16px;
-      overflow: hidden;
       background: rgba(255, 247, 237, 0.35);
-    }
-
-    /* .items-header, .item-row {
-      display: grid;
-      grid-template-columns: 1.2fr 0.9fr 0.9fr 1fr 1fr 1fr 0.7fr 40px;
-      gap: 8px;
       padding: 10px;
+    }
+
+    #items-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item-row {
+      border: 1px solid rgba(234, 215, 203, 0.9);
+      border-radius: 14px;
+      background: #fff;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item-field-line {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px;
       align-items: center;
-    } */
-
-    .item-row input[type="number"] {
-      font-size: 15px;
-      padding: 14px 12px;
-      min-height: 44px;
     }
 
-    .items-header, .item-row {
-      padding-left: 14px;
-      padding-right: 10px;
-    }
-
-    @media (min-width: 860px) {
-      .items-header,
-      .item-row {
-        grid-template-columns:
-          1.3fr 1fr 1fr 1.1fr 1.1fr 1.1fr 0.7fr 40px;
-      }
-    }
-
-    .items-header {
-      background: #FFF;
-      border-bottom: 1px solid rgba(234, 215, 203, 0.8);
+    .item-field-label {
       font-size: 12px;
       font-weight: 800;
       color: var(--brown);
-    }
-
-
-    .item-row {
-      border-bottom: 1px solid rgba(234, 215, 203, 0.5);
-    }
-
-    .item-row:last-child {
-      border-bottom: none;
+      white-space: nowrap;
     }
 
     .item-row input {
-      padding: 10px 10px;
-      border-radius: 14px;
+      padding: 9px 10px;
+      border-radius: 12px;
       font-size: 13px;
     }
 
+    .item-photo-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .item-photo-actions .mini-btn {
+      width: auto;
+      max-width: none;
+    }
+
+    .item-photo-status {
+      margin-left: 160px;
+    }
+
     .remove-btn {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 34px;
       border-radius: 999px;
       border: 1px solid var(--line);
       background: #fff;
@@ -328,15 +343,76 @@
 
     .remove-btn:hover { filter: brightness(0.98); }
 
-    /* small screens: stack columns */
+    .inv-preview-row {
+      background: #fff;
+      border: 1px solid rgba(234, 215, 203, 0.9);
+      border-radius: 14px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .inv-preview-head {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--brown);
+      margin-bottom: 8px;
+    }
+
+    .inv-preview-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .inv-detail-line {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 8px;
+      font-size: 12px;
+      color: #6d5142;
+    }
+
+    .inv-detail-key {
+      font-weight: 700;
+      color: var(--brown);
+    }
+
+    .inv-entry-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .split-btn {
+      flex: 1;
+      max-width: none;
+    }
+
+    .inv-inline-edit {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .inv-inline-edit .item-field-line {
+      grid-template-columns: 130px 1fr;
+    }
+
+    .inv-inline-edit .edit-hint {
+      min-height: 16px;
+    }
+
+    /* small screens: stack fields */
     @media (max-width: 720px) {
-      .items-header { display: none; }
-      .item-row {
-        grid-template-columns: 1fr 1fr;
+      .item-field-line,
+      .inv-detail-line,
+      .inv-inline-edit .item-field-line {
+        grid-template-columns: 120px 1fr;
+        gap: 6px;
       }
-      .item-row .remove-cell {
-        grid-column: 1 / -1;
-        text-align: right;
+
+      .item-photo-status {
+        margin-left: 0;
       }
     }
 

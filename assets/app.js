@@ -34,6 +34,7 @@ const dict = {
     "home.title": "🏠 Home",
     "home.desc": "Choose what you want to do:",
     "home.inventory": "📦 Add inventory",
+    "home.view_inventory": "📚 View inventory",
     "home.cook": "🍳 Cook recipes",
     "home.reminder": "🔔 Reminders",
     "home.reminder_desc": "This will be implemented after DB + reminder system.",
@@ -48,6 +49,7 @@ const dict = {
     "inv.preview_title": "🧾 Inventory",
     "inv.delete": "🗑️ Delete inventory",
     "inv.preview_empty": "No items yet.",
+    "inv.view_inventory": "View inventory",
 
     "inv.col_name": "Name",
     "inv.col_weight": "Weight (g)",
@@ -58,6 +60,17 @@ const dict = {
     "inv.col_production": "Production",
     "inv.col_expiry": "Expiry",
     "inv.col_photo": "Photo",
+    "inv.none": "None",
+    "inv.upload_btn": "📷 Upload",
+    "inv.upload_reading": "Reading nutrition label...",
+    "inv.upload_done": "✅ Filled (confidence: {confidence})",
+    "inv.upload_failed": "❌ Failed: {error}",
+    "inv.remove_title": "Remove",
+    "inv.delete_row": "Delete",
+    "inv.edit_row": "Edit",
+    "inv.save_row": "Save",
+    "inv.cancel_row": "Cancel",
+    "inv.edit_invalid": "Cannot edit: Name, Weight and Expiry are required.",
 
     "cook.title": "🍳 Cook recipes",
     "cook.desc": "Continue with saved inventory, or add items first.",
@@ -83,6 +96,14 @@ const dict = {
     "rem.expired": "❌ Expired",
     "rem.expires_today": "⚠️ Expires today",
     "rem.left": "⏳ {n} day(s) left",
+    "view.title": "📚 View inventory",
+    "view.desc": "Check all saved fridge items. You can edit or delete here.",
+    "view.back_inventory": "← Back to add inventory",
+    "view.back_home": "← Back to home",
+
+    "add.required_hint": "Please fill in Name, Weight and Expiry date before saving.",
+    "add.estimating": "Estimating calories and nutrition…",
+    "add.estimate_failed": "Estimation failed. Saved without nutrition fields.",
   },
 
   zh: {
@@ -97,6 +118,7 @@ const dict = {
     "home.title": "🏠 主界面",
     "home.desc": "选择你要做的事：",
     "home.inventory": "📦 添加存货",
+    "home.view_inventory": "📚 查看存货",
     "home.cook": "🍳 做饭菜谱",
     "home.reminder": "🔔 请求查看提醒",
     "home.reminder_desc": "该功能后续接数据库与提醒系统再做。",
@@ -111,6 +133,7 @@ const dict = {
     "inv.preview_title": "🧾 存货预览",
     "inv.delete": "🗑️ 删除存货",
     "inv.preview_empty": "暂无存货。",
+    "inv.view_inventory": "查看存货",
 
     "inv.col_name": "名称",
     "inv.col_weight": "重量 (g)",
@@ -121,6 +144,17 @@ const dict = {
     "inv.col_production": "生产日期",
     "inv.col_expiry": "保质期/到期",
     "inv.col_photo": "照片",
+    "inv.none": "无",
+    "inv.upload_btn": "📷 上传",
+    "inv.upload_reading": "正在识别营养成分表...",
+    "inv.upload_done": "✅ 已识别并回填（置信度：{confidence}）",
+    "inv.upload_failed": "❌ 识别失败：{error}",
+    "inv.remove_title": "移除",
+    "inv.delete_row": "删除",
+    "inv.edit_row": "编辑",
+    "inv.save_row": "保存",
+    "inv.cancel_row": "取消",
+    "inv.edit_invalid": "无法编辑：名字、重量、过期日期为必填项。",
 
     "cook.title": "🍳 做饭菜谱",
     "cook.desc": "你可以继续（使用已保存存货），或先去添加存货。",
@@ -146,6 +180,14 @@ const dict = {
     "rem.expired": "❌ 已过期",
     "rem.expires_today": "⚠️ 今天到期",
     "rem.left": "⏳ 剩余 {n} 天",
+    "view.title": "📚 查看存货",
+    "view.desc": "查看全部已保存存货，也可以在这里编辑或删除。",
+    "view.back_inventory": "← 返回添加存货",
+    "view.back_home": "← 返回首页",
+    "add.required_hint": "请先填写：名字、重量、过期日期，才能保存。",
+    "add.estimating": "正在估算热量等营养指标…",
+    "add.estimate_failed": "估算失败：已先保存（不含营养信息）。",
+
   }
 };
 
@@ -201,11 +243,21 @@ function applyI18n() {
     initReminderPage();
   }
 
+  // ✅ 切换语言后：inventory 页列表需要重渲染（里面有动态文本）
+  if (document.getElementById("inventory-required-banner")) {
+    renderRequiredBannerIfNeeded();
+  }
+
+  if (document.getElementById("items-rows")) {
+    localizeInventoryRows();
+  }
+
+  if (document.getElementById("save-status")) {
+    renderInventorySaveStatus();
+  }
 
 
 }
-
-
 
 function applyLangStatic() {
   const t = textMap[currentLang];
@@ -224,6 +276,10 @@ function setLang(lang) {
   document.getElementById("lang-zh")?.classList.toggle("active", currentLang === "zh");
   applyI18n(); // ✅ 切换语言后立即更新当前页面
 }
+
+
+
+
 
 
 // ===== Inventory DB (localStorage) =====
@@ -279,10 +335,63 @@ function deleteInventoryItemById(id) {
   return filtered;
 }
 
+function updateInventoryItemById(id, nextFields = {}) {
+  const db = loadInventoryFromDB();
+  const updated = db.map(it => {
+    if (it.id !== id) return it;
+    return {
+      ...it,
+      ...nextFields,
+      id: it.id,
+      created_at: it.created_at ?? new Date().toISOString(),
+    };
+  });
+  saveInventoryToDB(updated);
+  return updated;
+}
+
 function clearInventoryDB() {
   localStorage.removeItem(INVENTORY_KEY);
   return [];
 }
+
+const LS_REQUIRED_BANNER = "fridoge_required_banner";
+
+function setRequiredBanner(on) {
+  if (on) localStorage.setItem(LS_REQUIRED_BANNER, "1");
+  else localStorage.removeItem(LS_REQUIRED_BANNER);
+}
+
+function hasRequiredBanner() {
+  return localStorage.getItem(LS_REQUIRED_BANNER) === "1";
+}
+
+const inventoryUiState = {
+  saveStatusKey: null,
+  saveStatusVars: {},
+};
+
+function setInventorySaveStatus(key = null, vars = {}) {
+  inventoryUiState.saveStatusKey = key;
+  inventoryUiState.saveStatusVars = vars;
+  renderInventorySaveStatus();
+}
+
+function renderInventorySaveStatus() {
+  const el = document.getElementById("save-status");
+  if (!el) return;
+
+  if (!inventoryUiState.saveStatusKey) {
+    el.innerText = "";
+    el.style.display = "none";
+    return;
+  }
+
+  el.style.display = "block";
+  el.innerText = fmtI18n(inventoryUiState.saveStatusKey, inventoryUiState.saveStatusVars);
+}
+
+
 
 
 
@@ -302,6 +411,7 @@ async function loadView(name) {
   }
 
   if (name === "inventory") initInventory();
+  if (name === "view_inventory") initViewInventoryPage();
   if (name === "cook") initCook();
 
   if (name === "reminder") {
@@ -373,6 +483,10 @@ function initHome() {
   // nothing special
 }
 
+function initViewInventoryPage() {
+  renderInventoryPreview(loadInventoryFromDB());
+}
+
 function renderHomeReminderBanner() {
   const container = document.getElementById("home-reminder-container");
   if (!container) return;
@@ -408,29 +522,51 @@ function addItemRow(prefill = {}) {
   row.className = "item-row";
 
   row.innerHTML = `
-    <input class="item-name" type="text" placeholder="e.g. chicken breast" value="${escapeHtml(prefill.name ?? "")}" />
-    <input class="item-weight" type="number" min="0" step="any" placeholder="g" value="${prefill.weight_g ?? ""}" />
-    <input class="item-energy" type="number" min="0" step="any" placeholder="kJ" value="${prefill.energy_kj ?? ""}" />
-    <input class="item-protein" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.protein_g_per_100g ?? ""}" />
-    <input class="item-carb" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.carb_g_per_100g ?? ""}" />
-    <input class="item-fat" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.fat_g_per_100g ?? ""}" />
-
-    <input class="item-prod" type="date" value="${prefill.production_date ?? ""}" />
-    <input class="item-exp" type="date" value="${prefill.expiry_date ?? ""}" />
-
-    <div class="photo-cell">
-      <button class="mini-btn" type="button">📷 Upload</button>
-      <input class="item-photo" type="file" accept="image/*" style="display:none" />
-      <div class="hint item-photo-status" style="margin-top:6px; font-size:11px;"></div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_name"></span>
+      <input class="item-name" type="text" placeholder="e.g. chicken breast" value="${escapeHtml(prefill.name ?? "")}" />
     </div>
-
-    <div class="remove-cell">
-      <button class="remove-btn" type="button" title="Remove">✕</button>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_weight"></span>
+      <input class="item-weight" type="number" min="0" step="any" placeholder="g" value="${prefill.weight_g ?? ""}" />
     </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_energy"></span>
+      <input class="item-energy" type="number" min="0" step="any" placeholder="kJ" value="${prefill.energy_kj ?? ""}" />
+    </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_protein"></span>
+      <input class="item-protein" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.protein_g_per_100g ?? ""}" />
+    </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_carb"></span>
+      <input class="item-carb" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.carb_g_per_100g ?? ""}" />
+    </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_fat"></span>
+      <input class="item-fat" type="number" min="0" step="any" placeholder="g/100g" value="${prefill.fat_g_per_100g ?? ""}" />
+    </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_production"></span>
+      <input class="item-prod" type="date" value="${prefill.production_date ?? ""}" />
+    </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_expiry"></span>
+      <input class="item-exp" type="date" value="${prefill.expiry_date ?? ""}" />
+    </div>
+    <div class="item-field-line">
+      <span class="item-field-label" data-field-i18n="inv.col_photo"></span>
+      <div class="item-photo-actions">
+        <button class="mini-btn item-upload-btn" type="button">${fmtI18n("inv.upload_btn")}</button>
+        <input class="item-photo" type="file" accept="image/*" style="display:none" />
+        <button class="remove-btn" type="button" title="${escapeHtml(fmtI18n("inv.remove_title"))}">✕</button>
+      </div>
+    </div>
+    <div class="hint item-photo-status"></div>
   `;
 
   // bind upload
-  const uploadBtn = row.querySelector(".photo-cell .mini-btn");
+  const uploadBtn = row.querySelector(".item-upload-btn");
   const fileInput = row.querySelector(".item-photo");
   const statusEl = row.querySelector(".item-photo-status");
 
@@ -439,7 +575,7 @@ function addItemRow(prefill = {}) {
     const file = fileInput.files?.[0];
     if (!file) return;
 
-    statusEl.innerText = currentLang === "zh" ? "正在识别营养成分表..." : "Reading nutrition label...";
+    statusEl.innerText = fmtI18n("inv.upload_reading");
 
     try {
       const dataUrl = await readFileAsDataURL(file);
@@ -467,11 +603,9 @@ function addItemRow(prefill = {}) {
       if (!res.ok) throw new Error(out?.detail || out?.error || "nutrition api failed");
 
       fillRowFromItem(row, out.item);
-      statusEl.innerText = currentLang === "zh"
-        ? `✅ 已识别并回填（置信度：${out.confidence ?? "?"}）`
-        : `✅ Filled (confidence: ${out.confidence ?? "?"})`;
+      statusEl.innerText = fmtI18n("inv.upload_done", { confidence: out.confidence ?? "?" });
     } catch (e) {
-      statusEl.innerText = currentLang === "zh" ? `❌ 识别失败：${e.message}` : `❌ Failed: ${e.message}`;
+      statusEl.innerText = fmtI18n("inv.upload_failed", { error: e.message });
     } finally {
       fileInput.value = "";
     }
@@ -481,6 +615,7 @@ function addItemRow(prefill = {}) {
   row.querySelector(".remove-btn").addEventListener("click", () => row.remove());
 
   rows.appendChild(row);
+  localizeInventoryRows();
 }
 
 function fillRowFromItem(row, item) {
@@ -501,6 +636,21 @@ function fillRowFromItem(row, item) {
 
 function clearItemsTable() {
   document.getElementById("items-rows").innerHTML = "";
+}
+
+function localizeInventoryRows() {
+  document.querySelectorAll("#items-rows .item-row").forEach(row => {
+    row.querySelectorAll("[data-field-i18n]").forEach(label => {
+      const key = label.getAttribute("data-field-i18n");
+      label.innerText = `${fmtI18n(key)}:`;
+    });
+
+    const uploadBtn = row.querySelector(".item-upload-btn");
+    if (uploadBtn) uploadBtn.innerText = fmtI18n("inv.upload_btn");
+
+    const removeBtn = row.querySelector(".remove-btn");
+    if (removeBtn) removeBtn.title = fmtI18n("inv.remove_title");
+  });
 }
 
 
@@ -528,9 +678,12 @@ function updateInventoryHint(addedCount = null) {
 function readItemsFromTable() {
   const rows = Array.from(document.querySelectorAll("#items-rows .item-row"));
   const items = [];
+  let hasMissingRequired = false;
 
   for (const r of rows) {
     const name = (r.querySelector(".item-name")?.value ?? "").trim();
+    const weight = readNullableNumber(r.querySelector(".item-weight")?.value);
+    const expiry = readNullableDate(r.querySelector(".item-exp")?.value);
 
     const hasAnyField =
       name ||
@@ -544,19 +697,93 @@ function readItemsFromTable() {
 
     if (!hasAnyField) continue;
 
+    const hasRequired = !!name && weight !== null && expiry !== null;
+    if (!hasRequired) {
+      hasMissingRequired = true;
+      continue;
+    }
+
     items.push({
-      name: name || null,
-      weight_g: readNullableNumber(r.querySelector(".item-weight")?.value),
+      name,
+      weight_g: weight,
       energy_kj: readNullableNumber(r.querySelector(".item-energy")?.value),
       protein_g_per_100g: readNullableNumber(r.querySelector(".item-protein")?.value),
       carb_g_per_100g: readNullableNumber(r.querySelector(".item-carb")?.value),
       fat_g_per_100g: readNullableNumber(r.querySelector(".item-fat")?.value),
       production_date: readNullableDate(r.querySelector(".item-prod")?.value),
-      expiry_date: readNullableDate(r.querySelector(".item-exp")?.value),
+      expiry_date: expiry,
     });
   }
 
-  return items;
+  return { items, hasMissingRequired };
+}
+
+function needsNutritionEstimation(item) {
+  const hasRequired = !!item?.name && item?.weight_g !== null && item?.expiry_date !== null;
+  if (!hasRequired) return false;
+  return (
+    item.energy_kj === null ||
+    item.protein_g_per_100g === null ||
+    item.carb_g_per_100g === null ||
+    item.fat_g_per_100g === null
+  );
+}
+
+function mergeEstimatedNutrition(item, estimatedItem = {}) {
+  const toNum = (v) => readNullableNumber(v);
+  return {
+    ...item,
+    energy_kj: item.energy_kj ?? toNum(estimatedItem.energy_kj),
+    protein_g_per_100g: item.protein_g_per_100g ?? toNum(estimatedItem.protein_g_per_100g),
+    carb_g_per_100g: item.carb_g_per_100g ?? toNum(estimatedItem.carb_g_per_100g),
+    fat_g_per_100g: item.fat_g_per_100g ?? toNum(estimatedItem.fat_g_per_100g),
+  };
+}
+
+async function estimateNutritionForItem(item) {
+  const res = await fetch(`${API_BASE}/api/nutrition`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lang: currentLang,
+      estimate_only: true,
+      hint: { name: item.name, weight_g: item.weight_g }
+    })
+  });
+
+  const out = await res.json();
+  if (!res.ok) {
+    throw new Error(out?.detail || out?.error || "nutrition estimate failed");
+  }
+  return mergeEstimatedNutrition(item, out?.item);
+}
+
+async function estimateItemsForSave(items) {
+  const shouldEstimate = items.some(needsNutritionEstimation);
+  if (!shouldEstimate) return { items, failedCount: 0 };
+
+  setInventorySaveStatus("add.estimating");
+
+  try {
+    const settled = await Promise.all(items.map(async (item) => {
+      if (!needsNutritionEstimation(item)) {
+        return { item, failed: false };
+      }
+      try {
+        const estimated = await estimateNutritionForItem(item);
+        return { item: estimated, failed: false };
+      } catch {
+        return { item, failed: true };
+      }
+    }));
+
+    return {
+      items: settled.map(x => x.item),
+      failedCount: settled.filter(x => x.failed).length
+    };
+  } finally {
+    setInventorySaveStatus(null);
+  }
 }
 
 
@@ -574,36 +801,185 @@ function renderInventoryPreview(items) {
 
   if (empty) empty.style.display = "none";
 
+  const asText = (val) => {
+    if (val === null || val === undefined || String(val).trim() === "") {
+      return fmtI18n("inv.none");
+    }
+    return String(val);
+  };
+
+  const detailLine = (labelKey, value) => {
+    const line = document.createElement("div");
+    line.className = "inv-detail-line";
+    const k = document.createElement("span");
+    k.className = "inv-detail-key";
+    k.innerText = `${fmtI18n(labelKey)}:`;
+    const v = document.createElement("span");
+    v.className = "inv-detail-value";
+    v.innerText = value;
+    line.appendChild(k);
+    line.appendChild(v);
+    return line;
+  };
+
   items.forEach((it, idx) => {
     const row = document.createElement("div");
     row.className = "inv-preview-row";
 
-    const name = (it.name ?? "Unknown").trim() || "Unknown";
-    const weight = (it.weight_g ?? "None");
-    const prod = (it.production_date ?? "None");
-    const exp = (it.expiry_date ?? "None");
+    const header = document.createElement("div");
+    header.className = "inv-preview-head";
+    header.innerText = `${idx + 1}. ${(it.name ?? "").toString().trim() || fmtI18n("common.unknown")}`;
 
-    // 左侧文字
-    const text = document.createElement("div");
-    text.className = "inv-preview-text";
-    text.textContent = `${idx + 1}. ${name} | weight=${weight}g | prod=${prod} | exp=${exp}`;
+    const details = document.createElement("div");
+    details.className = "inv-preview-details";
+    details.appendChild(detailLine("inv.col_weight", (it.weight_g === null || it.weight_g === undefined) ? fmtI18n("inv.none") : `${it.weight_g}g`));
+    details.appendChild(detailLine("inv.col_energy", (it.energy_kj === null || it.energy_kj === undefined) ? fmtI18n("inv.none") : `${it.energy_kj} kJ`));
+    details.appendChild(detailLine("inv.col_protein", (it.protein_g_per_100g === null || it.protein_g_per_100g === undefined) ? fmtI18n("inv.none") : `${it.protein_g_per_100g} g/100g`));
+    details.appendChild(detailLine("inv.col_carb", (it.carb_g_per_100g === null || it.carb_g_per_100g === undefined) ? fmtI18n("inv.none") : `${it.carb_g_per_100g} g/100g`));
+    details.appendChild(detailLine("inv.col_fat", (it.fat_g_per_100g === null || it.fat_g_per_100g === undefined) ? fmtI18n("inv.none") : `${it.fat_g_per_100g} g/100g`));
+    details.appendChild(detailLine("inv.col_production", asText(it.production_date)));
+    details.appendChild(detailLine("inv.col_expiry", asText(it.expiry_date)));
 
-    // 右侧删除按钮（删除单条）
+    const actions = document.createElement("div");
+    actions.className = "inv-entry-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "mini-btn split-btn";
+    editBtn.type = "button";
+    editBtn.innerText = fmtI18n("inv.edit_row");
+
     const del = document.createElement("button");
-    del.className = "mini-btn";
+    del.className = "mini-btn split-btn";
     del.type = "button";
-    del.textContent = (currentLang === "zh") ? "删除" : "Delete";
+    del.innerText = fmtI18n("inv.delete_row");
+
+    actions.appendChild(editBtn);
+    actions.appendChild(del);
+
+    const editor = document.createElement("div");
+    editor.className = "inv-inline-edit hidden";
+    editor.innerHTML = `
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_name")}:</span>
+        <input class="edit-name" type="text" value="${escapeHtml(it.name ?? "")}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_weight")}:</span>
+        <input class="edit-weight" type="number" min="0" step="any" value="${escapeHtml(String(it.weight_g ?? ""))}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_energy")}:</span>
+        <input class="edit-energy" type="number" min="0" step="any" value="${escapeHtml(String(it.energy_kj ?? ""))}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_protein")}:</span>
+        <input class="edit-protein" type="number" min="0" step="any" value="${escapeHtml(String(it.protein_g_per_100g ?? ""))}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_carb")}:</span>
+        <input class="edit-carb" type="number" min="0" step="any" value="${escapeHtml(String(it.carb_g_per_100g ?? ""))}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_fat")}:</span>
+        <input class="edit-fat" type="number" min="0" step="any" value="${escapeHtml(String(it.fat_g_per_100g ?? ""))}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_production")}:</span>
+        <input class="edit-prod" type="date" value="${escapeHtml(String(it.production_date ?? ""))}" />
+      </div>
+      <div class="item-field-line">
+        <span class="item-field-label">${fmtI18n("inv.col_expiry")}:</span>
+        <input class="edit-exp" type="date" value="${escapeHtml(String(it.expiry_date ?? ""))}" />
+      </div>
+      <div class="hint edit-hint"></div>
+      <div class="inv-entry-actions">
+        <button class="mini-btn split-btn btn-save-edit" type="button">${fmtI18n("inv.save_row")}</button>
+        <button class="mini-btn split-btn btn-cancel-edit" type="button">${fmtI18n("inv.cancel_row")}</button>
+      </div>
+    `;
+
+    editBtn.addEventListener("click", () => {
+      editor.classList.toggle("hidden");
+    });
+
     del.addEventListener("click", () => {
       const updated = deleteInventoryItemById(it.id);
       renderInventoryPreview(updated);
       updateInventoryHint(null);
     });
 
-    row.appendChild(text);
-    row.appendChild(del);
+    const saveEditBtn = editor.querySelector(".btn-save-edit");
+    const cancelEditBtn = editor.querySelector(".btn-cancel-edit");
+    const editHint = editor.querySelector(".edit-hint");
+
+    cancelEditBtn?.addEventListener("click", () => {
+      editor.classList.add("hidden");
+      if (editHint) editHint.innerText = "";
+    });
+
+    saveEditBtn?.addEventListener("click", async () => {
+      const name = (editor.querySelector(".edit-name")?.value ?? "").trim();
+      const weight = readNullableNumber(editor.querySelector(".edit-weight")?.value);
+      const expiry = readNullableDate(editor.querySelector(".edit-exp")?.value);
+
+      if (!name || weight === null || expiry === null) {
+        if (editHint) editHint.innerText = fmtI18n("inv.edit_invalid");
+        return;
+      }
+
+      if (editHint) editHint.innerText = "";
+      saveEditBtn.disabled = true;
+
+      try {
+        const candidate = {
+          ...it,
+          name,
+          weight_g: weight,
+          energy_kj: readNullableNumber(editor.querySelector(".edit-energy")?.value),
+          protein_g_per_100g: readNullableNumber(editor.querySelector(".edit-protein")?.value),
+          carb_g_per_100g: readNullableNumber(editor.querySelector(".edit-carb")?.value),
+          fat_g_per_100g: readNullableNumber(editor.querySelector(".edit-fat")?.value),
+          production_date: readNullableDate(editor.querySelector(".edit-prod")?.value),
+          expiry_date: expiry,
+        };
+
+        const { items: estimatedItems } = await estimateItemsForSave([candidate]);
+        const updated = updateInventoryItemById(it.id, estimatedItems[0]);
+        renderInventoryPreview(updated);
+        updateInventoryHint(null);
+      } finally {
+        saveEditBtn.disabled = false;
+      }
+    });
+
+    row.appendChild(header);
+    row.appendChild(details);
+    row.appendChild(actions);
+    row.appendChild(editor);
     box.appendChild(row);
   });
+
+
 }
+
+function renderRequiredBannerIfNeeded() {
+  const host = document.getElementById("inventory-required-banner");
+  if (!host) return;
+
+  if (!hasRequiredBanner()) {
+    host.innerHTML = "";
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="notice warning">
+      ${fmtI18n("add.required_hint")}
+    </div>
+  `;
+}
+
+
+
 
 
 function initInventory() {
@@ -631,29 +1007,51 @@ function initInventory() {
 
   // preview right panel
   renderInventoryPreview(existing);
+  renderRequiredBannerIfNeeded();
+  localizeInventoryRows();
+  renderInventorySaveStatus();
+
+  const rowsHost = document.getElementById("items-rows");
+  const clearBannerOnEdit = (e) => {
+    const target = e.target;
+    if (!(target instanceof Element) || !target.closest(".item-row")) return;
+    if (!hasRequiredBanner()) return;
+    setRequiredBanner(false);
+    renderRequiredBannerIfNeeded();
+  };
+  rowsHost.addEventListener("input", clearBannerOnEdit);
+  rowsHost.addEventListener("change", clearBannerOnEdit);
 
   // ✅ Save: append to DB (ONLY ONE handler)
-  document.getElementById("btn-save-inventory").addEventListener("click", () => {
-    const newItems = readItemsFromTable();
+  document.getElementById("btn-save-inventory").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
+    btn.disabled = true;
 
-    const cleaned = newItems.filter(it => {
-      const hasName = (it.name ?? "").trim().length > 0;
-      const hasAny =
-        hasName ||
-        it.weight_g != null ||
-        it.energy_kj != null ||
-        it.protein_g_per_100g != null ||
-        it.carb_g_per_100g != null ||
-        it.fat_g_per_100g != null ||
-        it.production_date != null ||
-        it.expiry_date != null;
-      return hasAny;
-    });
+    try {
+      const { items: newItems, hasMissingRequired } = readItemsFromTable();
 
-    const merged = appendToInventoryDB(cleaned);
-    renderInventoryPreview(merged);
+      if (hasMissingRequired || newItems.length === 0) {
+        setRequiredBanner(true);
+        await loadView("inventory");
+        return;
+      }
 
-    updateInventoryHint(cleaned.length);
+      setRequiredBanner(false);
+      renderRequiredBannerIfNeeded();
+
+      const { items: estimatedItems } = await estimateItemsForSave(newItems);
+      const merged = appendToInventoryDB(estimatedItems);
+      renderInventoryPreview(merged);
+      updateInventoryHint(estimatedItems.length);
+
+      // Save succeeded: clear current input rows once for next entry batch.
+      clearItemsTable();
+      addItemRow();
+    } finally {
+      setInventorySaveStatus(null);
+      btn.disabled = false;
+    }
   });
 
   // ✅ Delete all inventory
